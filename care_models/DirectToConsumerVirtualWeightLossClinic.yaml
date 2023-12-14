@@ -1,0 +1,19 @@
+careModelTitle: "Direct-to-consumer virtual weight loss clinic"
+description: >
+  This care model supports a high-efficiency virtual weight loss clinic. Although it supports workflows to obtain prior authorization for medications, the payment model for clinical services is direct-to-consumer. The model supports an evidence-based stepwise approach of screening for co-morbidities, supporting lifestyle modifications, and prescribing GLP-1s when appropriate.
+protocolsIncluded:
+  - "CapturePaymentPreferences.py"
+  - "CollectDataForPriorAuthorization.py"
+  - "CommunicateProgramDisqualification.py"
+  - "CreateTaskForPrescriptionErrors.py"
+  - "DietaryPlanning.py"
+  - "DisplayProgramStatusInBanner.py"
+  - "InitiateGLP1Agonist.py"
+  - "ManageUncontrolledDiabetesHypothyroidismCushings.py"
+  - "OrderHomePhlebotomyForBloodDraws.py"
+  - "ScreenAndTreatSleepApnea.py"
+  - "ScreenForDiabetesHypothyroidCushings.py"
+  - "ScreenForGLP1AgonistSideEffects.py"
+  - "ScreenForMedicationsCausingWeightGain.py"
+  - "TitrateGLP1AgonistDose.py"
+  - "UpdateProgramStatus.py"
