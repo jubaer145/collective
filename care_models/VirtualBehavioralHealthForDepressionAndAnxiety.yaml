@@ -1,0 +1,15 @@
+careModelTitle: "Virtual Behavioral Health for Depression and Anxiety"
+description: >
+  The care model is designed around employer contracts, focusing on treating anxiety and depression through various interaction modes including asynchronous messaging, phone calls, and virtual meetings. It utilizes automated workflows and educational materials for medication initiation, maintaining treatments for chronic conditions like schizophrenia/bipolar without changes. The care team, composed of multi-state licensed MDs and NPs, is financially supported by a mix of employer contracts and fee-for-service payments.
+protocolsIncluded:
+  - "AlertForMissingIntake.py"
+  - "AutomatedPatientMessageTriage.py"
+  - "ExternalReferralForSeriousMentalIllnes.py"
+  - "FollowUpAfterSerotonergicMedicationInitiation.py"
+  - "FollowUpBupropionInitiation.py"
+  - "FollowupAfterSerotonergicMedicationAdjustment.py"
+  - "PHQ9ScreeningAlert.py"
+  - "RecommendPHQ9ForPositivePHQ2.py"
+  - "RoutineBloodworkForAntipsychotics.py"
+  - "SendPreAppointmentQuestionnaires.py"
+  - "SocialNeedsAlert.py"
