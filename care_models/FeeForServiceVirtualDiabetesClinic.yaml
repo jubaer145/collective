@@ -12,6 +12,7 @@ protocolsIncluded:
   - "HyperlinkToADAGuidelines.py"
   - "InitialGlucoseLoweringTherapyForDiabetes.py"
   - "InitiatingStatinTherapyInDiabetics.py"
+  - "LabReportAssignmentTask.py"
   - "MonitoringEffectsOfStatinTherapyInDiabetics.py"
   - "MonitoringRenalAndEndocrineLabsForDiabeticPatients.py"
   - "NoShowHandler.py"
