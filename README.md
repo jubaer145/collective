@@ -1,6 +1,6 @@
 # Collective
 
-Welcome to our Server-Side SDK Protocols Repository. This repository is dedicated to sharing protocols and care models as part of the Canvas server-side SDK. 
+Welcome to the Canvas collective! This repository is dedicated to sharing protocols and care models as part of the Canvas server-side SDK. 
 
 ## Overview
 
