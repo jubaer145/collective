@@ -73,7 +73,7 @@ class AnnualAssessment(ValueSet):
 
 class NotInterested(ClinicalQualityMeasure):
     class Meta:
-        title = 'New Member Engagement - Not Interested'
+        title = 'Engagement - Not Interested'
         description = ()
         version = '1.0.1'
         information = 'https://canvasmedical.com/gallery'
