@@ -75,7 +75,7 @@ class AnnualAssessment(ValueSet):
 
 class KeepTrying(ClinicalQualityMeasure):
     class Meta:
-        title = 'New Member Engagement - Keep Trying'
+        title = 'Engagement: Phase 2 - Keep Trying'
         description = (
             'This protocol is for identifying members to follow-up trying to call'
             'who have not had an annual assessment, '
