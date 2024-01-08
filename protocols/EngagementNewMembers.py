@@ -78,7 +78,7 @@ class AnnualAssessment(ValueSet):
 
 class NewMembers(ClinicalQualityMeasure):
     class Meta:
-        title = 'Engagement For New Members'
+        title = 'Engagement: Phase 1 - New Members'
         description = (
             'This protocol identifies patients to be called who have not had an annual assessment, '
             'have had fewer than 5 phone call attempts, '
