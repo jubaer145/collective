@@ -28,7 +28,7 @@ class LabReportTasks(ClinicalQualityMeasure):
             'of this protocol is to ensure all lab reports are assigned'
             'to staff who are able to review.'
         )
-        version = '1.0.1'
+        version = '1.0.2'
         information = 'https://canvasmedical.com/gallery'
         identifiers = []
         types = []
@@ -46,48 +46,47 @@ class LabReportTasks(ClinicalQualityMeasure):
                 return member['staff']['key']
         return None
 
-    def create_task(self) -> None:
+    def create_tasks(self, ids) -> None:
         '''
-        Create a task for the appropriate care team member if one exists.
+        Create a tasks for each lab report assigned to the appropriate care team member if one exists.
         '''
         member_id = self.get_appropriate_care_team_member() or FALLBACK_STAFF_KEY
-        report_id = self.field_changes['canvas_id'] if self.field_changes else ''
-        title = f'Lab Report {report_id} assigned to Canvas Support.'
-        task_payload = create_task_payload(
-            patient_key=self.patient.patient['key'],
-            created_by_key=CANVAS_BOT_KEY,
-            status='OPEN',
-            title=title,
-            assignee_identifier=member_id,
-            due=arrow.now().shift(weeks=1).isoformat(),
-            created=arrow.now().isoformat(),
-            labels=TASK_LABELS,
-        )
-        self.set_updates([task_payload])
+        tasks = []
+        for report_id in ids:
+            title = f'Lab Report {report_id} assigned to Canvas Support.'
 
-    def get_lab_report(self) -> Optional[dict]:
-        '''Return the lab report that was changed.'''
-        if field_changes := self.field_changes:
-            report_id = field_changes['canvas_id']
-            return self.patient.lab_reports.filter(report=report_id).last()
-        else:
-            return None
+            # Make sure this task isn't already open to prevent duplicates
+            if not self.patient.tasks.filter(title=title, status="OPEN"):
+                tasks.append(create_task_payload(
+                    patient_key=self.patient.patient['key'],
+                    created_by_key=CANVAS_BOT_KEY,
+                    status='OPEN',
+                    title=title,
+                    assignee_identifier=member_id,
+                    due=arrow.now().shift(weeks=1).isoformat(),
+                    created=arrow.now().isoformat(),
+                    labels=TASK_LABELS,
+                ))
 
-    def is_assigned_to_canvas_support(self) -> bool:
-        '''Return True if the lab report is assigned to Canvas Support.'''
-        lab_report = self.get_lab_report()
-        return (
-            any(reviewer['key'] == CANVAS_SUPPORT_KEY for reviewer in lab_report['reviewers'])
-            if lab_report
-            else False
-        )
+        self.set_updates(tasks)
+        return tasks
+
+    def is_lab_reports_assigned_to_canvas_support(self) -> bool:
+        '''Return list of Lab Report IDs that are assigned to Canvas Support.'''
+        report_ids = set()
+        for lab_report in self.patient.lab_reports:
+            for reviewer in lab_report['reviewers']:
+                if reviewer['key'] == CANVAS_SUPPORT_KEY:
+                    report_ids.add(lab_report['report'])
+
+        return report_ids
 
     def compute_results(self) -> ProtocolResult:
         result = ProtocolResult()
-        if self.is_assigned_to_canvas_support():
-            self.create_task()
+        if report_ids := self.is_lab_reports_assigned_to_canvas_support():
+            tasks = self.create_tasks(report_ids)
             result.status = STATUS_SATISFIED
-            result.add_narrative('Task created')
+            result.add_narrative(f'{len(tasks)} tasks created')
         else:
             result.status = STATUS_NOT_APPLICABLE
             result.add_narrative('Report not assigned to Canvas Support, no task created.')
