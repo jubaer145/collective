@@ -163,13 +163,17 @@ class TransitionsAndHospitalizations(ClinicalQualityMeasure):
         Returns:
             bool: True if the patient has been called today, False otherwise.
         '''
-        return bool(self._get_phone_calls_to_patient().after(self._now.shift(days=-1)))
+        return bool(
+            self._get_phone_calls_to_patient().after(self._now.replace(hour=0, minute=0, second=0))
+        )
 
     def compute_results(self) -> ProtocolResult:
         result = ProtocolResult()
         if self.in_denominator():
             if self.in_numerator():
-                result.next_review = self._now.shift(days=1).replace(hour=23)
+                result.next_review = self._now.replace(hour=0, minute=0, second=0).shift(
+                    days=1, hours=-1
+                )
                 result.status = STATUS_SATISFIED
                 result.add_narrative(
                     'Patient has a transition task with no annual assessment '
