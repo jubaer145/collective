@@ -12,8 +12,7 @@ from canvas_workflow_kit.protocol import (
     ProtocolResult,
 )
 
-# Replace with the timezone of your clinic.
-NOW = arrow.now(tz='America/Phoenix')
+DEFAULT_TIMEZONE = 'America/Phoenix'
 # Replace with the labels of your special tasks.
 ENGAGEMENT_TRANSITION_TASK_LABELS = ['Engagement']
 
@@ -22,12 +21,12 @@ class SpecialTasks(ClinicalQualityMeasure):
     class Meta:
         title = 'Engagement: Special Tasks'
         description = ()
-        version = '1.0.0'
+        version = '1.0.1'
         information = 'https://canvasmedical.com/gallery'  # Replace with the link to your protocol.
-        identifiers = []
+        identifiers: List[str] = []
         types = ['DUO']
         compute_on_change_types = [CHANGE_TYPE.TASK]
-        references = []
+        references: List[str] = []
 
     def _get_tasks_by_label(self, labels: List[str]) -> TaskRecordSet:
         '''
@@ -62,8 +61,9 @@ class SpecialTasks(ClinicalQualityMeasure):
         Returns:
             bool: True if there are patients with a special task in the future, False otherwise.
         '''
+        now = arrow.now(DEFAULT_TIMEZONE)
         engagement_transition_tasks = self._get_tasks_by_label(ENGAGEMENT_TRANSITION_TASK_LABELS)
-        return any(arrow.get(task['due']) > NOW for task in engagement_transition_tasks.records)
+        return any(arrow.get(task['due']) > now for task in engagement_transition_tasks.records)
 
     def compute_results(self) -> ProtocolResult:
         '''Computes the results of the special tasks protocol.
