@@ -217,7 +217,7 @@ class NewMembers(ClinicalQualityMeasure):
             bool: True if the patient has had a phone call today, False otherwise.
         '''
         phone_calls = self._get_phone_calls_to_patient()
-        return bool(phone_calls.after(self._now.shift(days=-1)))
+        return bool(phone_calls.after(self._now.replace(hour=0, minute=0, second=0)))
 
     def compute_results(self) -> ProtocolResult:
         '''
@@ -230,7 +230,9 @@ class NewMembers(ClinicalQualityMeasure):
 
         if self.in_denominator():
             if self.in_numerator():
-                result.next_review = self._now.shift(days=1).replace(hour=23)
+                result.next_review = self._now.replace(hour=0, minute=0, second=0).shift(
+                    hours=-1, days=1
+                )
                 result.status = STATUS_SATISFIED
                 result.add_narrative('Patient has been called today. Try again tomorrow.')
             else:
