@@ -192,10 +192,14 @@ class CareTeamEngagement(ClinicalQualityMeasure):
             bool: True if the patient has satisfied the above condition, False otherwise.
         '''
         phone_calls = self._get_phone_calls_to_patient().after(
-            self._now.shift(days=-(TASK_UPDATE_LOOKBACK_DAYS + 1))
+            self._now.replace(hour=0, minute=0, second=0).shift(
+                days=-(TASK_UPDATE_LOOKBACK_DAYS + 1)
+            )
         )
         task_updates = self._has_task_update_after(
-            self._now.shift(days=-(TASK_UPDATE_LOOKBACK_DAYS + 1))
+            self._now.replace(hour=0, minute=0, second=0).shift(
+                days=-(TASK_UPDATE_LOOKBACK_DAYS + 1)
+            )
         )
         return bool(task_updates) or bool(phone_calls)
 
@@ -203,8 +207,8 @@ class CareTeamEngagement(ClinicalQualityMeasure):
         result = ProtocolResult()
         if self.in_denominator():
             if self.in_numerator():
-                result.next_review = self._now.shift(days=TASK_UPDATE_LOOKBACK_DAYS + 1).replace(
-                    hour=23
+                result.next_review = self._now.replace(hour=0, minute=0, second=0).shift(
+                    hours=-1, days=TASK_UPDATE_LOOKBACK_DAYS + 1
                 )
                 result.status = STATUS_SATISFIED
                 result.add_narrative(
