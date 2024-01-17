@@ -192,7 +192,9 @@ class KeepTrying(ClinicalQualityMeasure):
             bool: True if the patient has had a phone call this week, False otherwise.
         '''
         phone_calls: InterviewRecordSet = self._get_phone_calls_to_patient()
-        return bool(phone_calls.after(self._now.shift(weeks=-1)))
+        return bool(
+            phone_calls.after(self._now.replace(hour=0, minute=0, second=0).shift(weeks=-1))
+        )
 
     def compute_results(self) -> ProtocolResult:
         '''Compute the results of the protocol for a patient.
@@ -203,8 +205,12 @@ class KeepTrying(ClinicalQualityMeasure):
         result = ProtocolResult()
         if self.in_denominator():
             if self.in_numerator():
-                next_monday_evening = self._now.shift(days=7 - self._now.weekday()).replace(hour=23)
-                result.next_review = next_monday_evening
+                next_sunday_evening = (
+                    self._now.shift(days=7 - self._now.weekday())
+                    .replace(hour=0, minute=0, second=0)
+                    .shift(hours=-1)
+                )
+                result.next_review = next_sunday_evening
                 result.status = STATUS_SATISFIED
                 result.add_narrative('Patient has been called this week. Try again next week.')
             else:
