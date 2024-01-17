@@ -20,8 +20,7 @@ from canvas_workflow_kit.value_set import ValueSet
 # Replace this with the ID of the Phone Call Disposition Questionnaire.
 PHONE_CALL_DISPOSITION_QUESTIONNAIRE_ID = 'QUES_PHONE_01'
 
-# Replace this with the timezone of your clinic.
-NOW = arrow.now(tz='America/Phoenix')
+DEFAULT_TIMEZONE = 'America/Phoenix'
 
 
 class PhoneQuestions(Enum):
@@ -74,16 +73,23 @@ class AppointmentTomorrow(ClinicalQualityMeasure):
     class Meta:
         title = 'Appointments: Tomorrow'
         description = ()
-        version = '1.0.0'
+        version = '1.0.1'
         information = 'https://canvasmedical.com/gallery'
-        identifiers = []
+        identifiers: List[str] = []
         types = ['DUO']
         compute_on_change_types = [
             CHANGE_TYPE.INTERVIEW,
             CHANGE_TYPE.APPOINTMENT,
             CHANGE_TYPE.TASK,
         ]
-        references = []
+        references: List[str] = []
+
+    def _get_timezone(self) -> str:
+        return self.settings.get('TIMEZONE') or DEFAULT_TIMEZONE
+
+    @property
+    def _now(self) -> arrow.Arrow:
+        return arrow.now(self._get_timezone())
 
     def _get_phone_calls_to_patient(self) -> InterviewRecordSet:
         '''Get all phone calls made to this patient.
@@ -140,7 +146,7 @@ class AppointmentTomorrow(ClinicalQualityMeasure):
             bool: True if the patient has an appointment tomorrow, False otherwise.
         '''
         return any(
-            arrow.get(x['startTime']).date() == NOW.shift(days=1).date()
+            arrow.get(x['startTime']).date() == self._now.shift(days=1).date()
             for x in self._get_upcoming_appointments()
         )
 
