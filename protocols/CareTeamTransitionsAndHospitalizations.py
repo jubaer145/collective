@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import List
 
 import arrow
 
@@ -21,7 +22,7 @@ from canvas_workflow_kit.value_set import ValueSet
 PHONE_CALL_DISPOSITION_QUESTIONNAIRE_ID = 'QUES_PHONE_01'
 
 # Replace this with the current time in the desired timezone.
-NOW = arrow.now(tz='America/Phoenix')
+DEFAULT_TIMEZONE = 'America/Phoenix'
 
 # Replace this with the labels for the transition tasks.
 TRANSITION_TASK_LABELS = ['Transition', 'Hospitalized']
@@ -77,9 +78,9 @@ class TransitionsAndHospitalizations(ClinicalQualityMeasure):
     class Meta:
         title = 'Care Team - Transitions and Hospitalizations'
         description = ()
-        version = '1.0.0'
+        version = '1.0.1'
         information = 'https://canvasmedical.com/gallery'  # Replace with the link to your protocol.
-        identifiers = []
+        identifiers: List[str] = []
         types = ['DUO']
         compute_on_change_types = [
             CHANGE_TYPE.INTERVIEW,
@@ -89,7 +90,14 @@ class TransitionsAndHospitalizations(ClinicalQualityMeasure):
             CHANGE_TYPE.IMAGING_REPORT,
             CHANGE_TYPE.BILLING_LINE_ITEM,
         ]
-        references = []
+        references: List[str] = []
+
+    def _get_timezone(self) -> str:
+        return self.settings.get('TIMEZONE') or DEFAULT_TIMEZONE
+
+    @property
+    def _now(self) -> arrow.Arrow:
+        return arrow.now(self._get_timezone())
 
     def _get_annual_assessments(self) -> BillingLineItemRecordSet:
         '''Get annual assessments.
@@ -155,14 +163,18 @@ class TransitionsAndHospitalizations(ClinicalQualityMeasure):
         Returns:
             bool: True if the patient has been called today, False otherwise.
         '''
-        return bool(self._get_phone_calls_to_patient().after(NOW.shift(days=-1)))
+        return bool(self._get_phone_calls_to_patient().after(self._now.shift(days=-1)))
 
     def compute_results(self) -> ProtocolResult:
         result = ProtocolResult()
         if self.in_denominator():
             if self.in_numerator():
+                result.next_review = self._now.shift(days=1).replace(hour=23)
                 result.status = STATUS_SATISFIED
-                result.add_narrative('Patient has been called today.')
+                result.add_narrative(
+                    'Patient has a transition task with no annual assessment '
+                    'and has been called today. Call again tomorrow.'
+                )
             else:
                 result.due_in = -1
                 result.status = STATUS_DUE
