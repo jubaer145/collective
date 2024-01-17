@@ -1,3 +1,5 @@
+from typing import List
+
 import arrow
 
 from canvas_workflow_kit.patient_recordset import (
@@ -14,8 +16,7 @@ from canvas_workflow_kit.protocol import (
 )
 from canvas_workflow_kit.value_set import ValueSet
 
-# Replace this with the timezone of your clinic.
-NOW = arrow.now(tz='America/Phoenix')
+DEFAULT_TIMEZONE = 'America/Phoenix'
 
 
 class AnnualAssessment(ValueSet):
@@ -48,13 +49,20 @@ class AnnualAssessmentEngagement(ClinicalQualityMeasure):
         description = ()
         version = '1.0.0'
         information = 'https://canvasmedical.com/gallery'  # Replace with the link to your protocol.
-        identifiers = []
+        identifiers: List[str] = []
         types = ['DUO']
         compute_on_change_types = [
             CHANGE_TYPE.APPOINTMENT,
             CHANGE_TYPE.BILLING_LINE_ITEM,
         ]
-        references = []
+        references: List[str] = []
+
+    def _get_timezone(self) -> str:
+        return self.settings.get('TIMEZONE') or DEFAULT_TIMEZONE
+
+    @property
+    def _now(self) -> arrow.Arrow:
+        return arrow.now(self._get_timezone())
 
     def _get_annual_assessments_between(
         self, start: arrow.Arrow, end: arrow.Arrow
@@ -101,8 +109,8 @@ class AnnualAssessmentEngagement(ClinicalQualityMeasure):
         Returns:
             bool: True if the patient satisfies the above condition, False otherwise.
         '''
-        last_year_start = arrow.get(NOW.year - 1, 1, 1)
-        last_year_end = arrow.get(NOW.year - 1, 12, 31)
+        last_year_start = arrow.get(self._now.year - 1, 1, 1)
+        last_year_end = arrow.get(self._now.year - 1, 12, 31)
         return bool(self._get_annual_assessments_between(last_year_start, last_year_end))
 
     def in_numerator(self) -> bool:
@@ -117,12 +125,12 @@ class AnnualAssessmentEngagement(ClinicalQualityMeasure):
         Returns:
             bool: True if the patient satisfies the above condition, False otherwise.
         '''
-        this_year_start = arrow.get(NOW.year, 1, 1)
-        six_months_ago = NOW.shift(months=-6)
+        this_year_start = arrow.get(self._now.year, 1, 1)
+        six_months_ago = self._now.shift(months=-6)
         return (
-            self._get_annual_assessments_between(six_months_ago, NOW)
-            or self._get_annual_assessments_between(six_months_ago, NOW)
-            or self._get_appointments_between(this_year_start, NOW)
+            self._get_annual_assessments_between(six_months_ago, self._now)
+            or self._get_annual_assessments_between(six_months_ago, self._now)
+            or self._get_appointments_between(this_year_start, self._now)
         )
 
     def compute_results(self) -> ProtocolResult:
