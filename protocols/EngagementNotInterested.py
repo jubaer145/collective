@@ -19,10 +19,10 @@ from canvas_workflow_kit.protocol import (
 )
 from canvas_workflow_kit.value_set import ValueSet
 
-PHONE_CALL_DISPOSITION_QUESTIONNAIRE_ID = 'QUES_PHONE_01'
 
+PHONE_CALL_DISPOSITION_QUESTIONNAIRE_ID = 'QUES_PHONE_01'
 ENGAGEMENT_TRANSITION_TASK_LABELS = ['Engagement', 'Transition']
-NOW = arrow.now(tz='America/Phoenix')
+DEFAULT_TIMEZONE = 'America/Phoenix'
 
 
 class PhoneCallDispositionQuestionnaire(ValueSet):
@@ -73,14 +73,21 @@ class AnnualAssessment(ValueSet):
 
 class NotInterested(ClinicalQualityMeasure):
     class Meta:
-        title = 'Engagement - Not Interested'
+        title = 'New Member Engagement - Not Interested'
         description = ()
-        version = '1.0.1'
+        version = '1.0.2'
         information = 'https://canvasmedical.com/gallery'
-        identifiers = []
+        identifiers: List[str] = []
         types = ['DUO']
         compute_on_change_types = [CHANGE_TYPE.INTERVIEW, CHANGE_TYPE.APPOINTMENT, CHANGE_TYPE.TASK]
-        references = []
+        references: List[str] = []
+
+    def _get_timezone(self) -> str:
+        return self.settings.get('TIMEZONE') or DEFAULT_TIMEZONE
+
+    @property
+    def _now(self) -> arrow.Arrow:
+        return arrow.now(self._get_timezone())
 
     def _get_annual_assessments_after(self, start_time: arrow.Arrow) -> BillingLineItemRecordSet:
         '''Get annual assessments'''
@@ -150,7 +157,7 @@ class NotInterested(ClinicalQualityMeasure):
         )
         '''
         return (
-            not self._get_annual_assessments_after(arrow.get(NOW.year, 1, 1))
+            not self._get_annual_assessments_after(arrow.get(self._now.year, 1, 1))
             and (
                 PhoneResponses.REACHED_NOT_INTERESTED
                 in (x[0] for x in self._get_phone_call_responses())
@@ -167,12 +174,12 @@ class NotInterested(ClinicalQualityMeasure):
         return (
             PhoneResponses.REACHED_NOT_INTERESTED
             in (x[0] for x in self._get_phone_call_responses())
-        ) and bool(self._get_annual_assessments_after(arrow.get(NOW.year, 1, 1)))
+        ) and bool(self._get_annual_assessments_after(arrow.get(self._now.year, 1, 1)))
 
     def in_numerator(self) -> bool:
         shift_days = -90 if self.in_denominator_1() else -30 if self.in_denominator_2() else 0
         return (
-            any(x[1] > NOW.shift(days=shift_days) for x in self._get_phone_call_responses())
+            any(x[1] > self._now.shift(days=shift_days) for x in self._get_phone_call_responses())
             if shift_days
             else False
         )
