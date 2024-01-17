@@ -1,7 +1,7 @@
 import datetime
 
 from enum import Enum
-from typing import Optional
+from typing import Optional, List
 
 import arrow
 
@@ -26,15 +26,14 @@ PHONE_CALL_DISPOSITION_QUESTIONNAIRE_ID = 'QUES_PHONE_01'
 RISK_STRATIFICATION_QUESTIONNAIRE_ID = 'DUO_QUES_RISK_STRAT_01'
 RISK_STRATIFICATION_QUESTION_ID = 'DUO_QUES_RISK_STRAT_02'
 
-# Replace with the timezone of your clinic
-NOW = arrow.now(tz='America/Phoenix')
+DEFAULT_TIMEZONE = 'America/Phoenix'
 
 # -- each of these is the window + 10% (33 days, 66 days, 198 days)
 SIX_MONTHS_WINDOW = datetime.timedelta(days=198)
 TWO_MONTH_WINDOW = datetime.timedelta(days=66)
 NEXT_MONTH_WINDOW = datetime.timedelta(days=33)
 
-LONG_TIME_AGO = NOW.shift(years=-10)
+LONG_TIME_AGO = arrow.now().shift(years=-10)
 
 # Replace with the default risk stratification
 DEFAULT_RISK = 'Low'
@@ -79,12 +78,19 @@ class FollowupOverdue(ClinicalQualityMeasure):
     class Meta:
         title = 'Follow-ups: Follow-up Overdue'
         description = ()
-        version = '1.0.0'
+        version = '1.0.2'
         information = 'https://canvasmedical.com/gallery'  # Replace with the link to your protocol.
-        identifiers = []
+        identifiers: List[str] = []
         types = ['DUO']
         compute_on_change_types = [CHANGE_TYPE.INTERVIEW, CHANGE_TYPE.APPOINTMENT]
-        references = []
+        references: List[str] = []
+
+    def _get_timezone(self) -> str:
+        return self.settings.get('TIMEZONE') or DEFAULT_TIMEZONE
+
+    @property
+    def _now(self) -> arrow.Arrow:
+        return arrow.now(self._get_timezone())
 
     def _get_risk_stratification(self, latest_date: arrow.Arrow = LONG_TIME_AGO):
         '''
@@ -140,7 +146,7 @@ class FollowupOverdue(ClinicalQualityMeasure):
         Returns:
             bool: True if the date is after the risk stratification period, False otherwise.
         '''
-        return date > NOW + self._get_risk_stratification_period()
+        return date > self._now + self._get_risk_stratification_period()
 
     def _is_before_risk_period(self, date: arrow.Arrow) -> bool:
         '''
@@ -152,7 +158,7 @@ class FollowupOverdue(ClinicalQualityMeasure):
         Returns:
             bool: true if the date is before the risk period, false otherwise.
         '''
-        return date < NOW + self._get_risk_stratification_period()
+        return date < self._now + self._get_risk_stratification_period()
 
     def _get_phone_calls_to_patient(self) -> InterviewRecordSet:
         '''Get all phone calls made to this patient.
@@ -285,14 +291,20 @@ class FollowupOverdue(ClinicalQualityMeasure):
         Returns:
             bool: True if the patient has been called in the past week, False otherwise.
         '''
-        return bool(self._get_phone_calls_to_patient().after(NOW.shift(weeks=-1)))
+        return bool(self._get_phone_calls_to_patient().after(self._now.shift(weeks=-1)))
 
     def compute_results(self) -> ProtocolResult:
         result = ProtocolResult()
         if self.in_denominator():
             if self.in_numerator():
+                next_monday_evening = self._now.shift(days=7 - self._now.weekday()).replace(hour=23)
+                result.next_review = next_monday_evening
                 result.status = STATUS_SATISFIED
-                result.add_narrative('Patient has been contacted in the past week.')
+                result.add_narrative(
+                    'Patient has no follow-up appointment within their risk stratification '
+                    'period and has been contacted in the past week. '
+                    'Try again next week.'
+                )
             else:
                 result.due_in = -1
                 result.status = STATUS_DUE
