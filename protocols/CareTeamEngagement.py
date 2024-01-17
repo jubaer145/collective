@@ -36,8 +36,7 @@ class PhoneResponses(Enum):
     FREE_TEXT = 'QUES_PHONE_16'
 
 
-# Replace with the timezone of your clinic.
-NOW = arrow.now(tz='America/Phoenix')
+DEFAULT_TIMEZONE = 'America/Phoenix'
 # Replace this with the ID of the Care Team Engagement team.
 ENGAGEMENT_TEAM_ID = 'Engagement'
 # Replace this with the number of days to look back for task updates (0 = updates today).
@@ -81,12 +80,19 @@ class CareTeamEngagement(ClinicalQualityMeasure):
     class Meta:
         title = 'Care Team - Engagement'
         description = ()
-        version = '1.0.0'
+        version = '1.0.3'
         information = 'https://canvasmedical.com/gallery'  # Replace with the link to your protocol.
-        identifiers = []
+        identifiers: List[str] = []
         types = ['DUO']
         compute_on_change_types = [CHANGE_TYPE.INTERVIEW, CHANGE_TYPE.APPOINTMENT, CHANGE_TYPE.TASK]
-        references = []
+        references: List[str] = []
+
+    def _get_timezone(self) -> str:
+        return self.settings.get('TIMEZONE') or DEFAULT_TIMEZONE
+
+    @property
+    def _now(self) -> arrow.Arrow:
+        return arrow.now(self._get_timezone())
 
     def _get_annual_assessments(self) -> BillingLineItemRecordSet:
         '''Get annual assessments.
@@ -179,25 +185,33 @@ class CareTeamEngagement(ClinicalQualityMeasure):
     def in_numerator(self) -> bool:
         '''
         Check for patients who either:
-            - who have received a call today
+            - who have received a call in the last TASK_UPDATE_LOOKBACK_DAYS days
             - for whom there’s been a task update in the last TASK_UPDATE_LOOKBACK days.
 
         Returns:
             bool: True if the patient has satisfied the above condition, False otherwise.
         '''
-        phone_calls_today = self._get_phone_calls_to_patient().after(NOW.shift(days=-1))
-        task_updates = self._has_task_update_after(NOW.shift(days=-(TASK_UPDATE_LOOKBACK_DAYS + 1)))
-        return bool(task_updates) or bool(phone_calls_today)
+        phone_calls = self._get_phone_calls_to_patient().after(
+            self._now.shift(days=-(TASK_UPDATE_LOOKBACK_DAYS + 1))
+        )
+        task_updates = self._has_task_update_after(
+            self._now.shift(days=-(TASK_UPDATE_LOOKBACK_DAYS + 1))
+        )
+        return bool(task_updates) or bool(phone_calls)
 
     def compute_results(self) -> ProtocolResult:
         result = ProtocolResult()
         if self.in_denominator():
             if self.in_numerator():
+                result.next_review = self._now.shift(days=TASK_UPDATE_LOOKBACK_DAYS + 1).replace(
+                    hour=23
+                )
                 result.status = STATUS_SATISFIED
                 result.add_narrative(
                     (
-                        'Patient has been called today or has a task update '
-                        f'within {TASK_UPDATE_LOOKBACK_DAYS} days.'
+                        'Patient has been called or has a task update '
+                        f'within {TASK_UPDATE_LOOKBACK_DAYS} days. '
+                        f'Try again in {TASK_UPDATE_LOOKBACK_DAYS + 1} day(s).'
                     )
                 )
             else:
