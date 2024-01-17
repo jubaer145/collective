@@ -67,14 +67,14 @@ class AppointmentReschedule(ClinicalQualityMeasure):
         description = ()
         version = '1.0.0'
         information = 'https://canvasmedical.com/gallery'
-        identifiers = []
+        identifiers: List[str] = []
         types = ['DUO']
         compute_on_change_types = [
             CHANGE_TYPE.INTERVIEW,
             CHANGE_TYPE.APPOINTMENT,
             CHANGE_TYPE.TASK,
         ]
-        references = []
+        references: List[str] = []
 
     def _get_phone_calls_to_patient(self) -> InterviewRecordSet:
         '''Get all phone calls made to this patient.
