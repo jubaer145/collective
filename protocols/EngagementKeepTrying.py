@@ -23,8 +23,7 @@ from canvas_workflow_kit.value_set import ValueSet
 PHONE_CALL_DISPOSITION_QUESTIONNAIRE_ID = 'QUES_PHONE_01'
 # Replace with the labels of the tasks you want to use
 ENGAGEMENT_TRANSITION_TASK_LABELS = ['Engagement', 'Transition']
-# Replace with the timezone of your clinic
-NOW = arrow.now(tz='America/Phoenix')
+DEFAULT_TIMEZONE = 'America/Phoenix'
 
 
 class PhoneCallDispositionQuestionnaire(ValueSet):
@@ -75,7 +74,7 @@ class AnnualAssessment(ValueSet):
 
 class KeepTrying(ClinicalQualityMeasure):
     class Meta:
-        title = 'Engagement: Phase 2 - Keep Trying'
+        title = 'New Member Engagement - Keep Trying'
         description = (
             'This protocol is for identifying members to follow-up trying to call'
             'who have not had an annual assessment, '
@@ -83,12 +82,19 @@ class KeepTrying(ClinicalQualityMeasure):
             'do not have a "non interested" status, are English speakers, and do not have a '
             'engagement/transition task. '
         )
-        version = '1.0.1'
+        version = '1.0.2'
         information = 'https://canvasmedical.com/gallery'  # Replace with the link to your protocol
-        identifiers = []
+        identifiers: List[str] = []
         types = ['DUO']
         compute_on_change_types = [CHANGE_TYPE.INTERVIEW, CHANGE_TYPE.APPOINTMENT, CHANGE_TYPE.TASK]
-        references = []
+        references: List[str] = []
+
+    def _get_timezone(self) -> str:
+        return self.settings.get('TIMEZONE') or DEFAULT_TIMEZONE
+
+    @property
+    def _now(self) -> arrow.Arrow:
+        return arrow.now(self._get_timezone())
 
     def _get_annual_assessments(self) -> BillingLineItemRecordSet:
         '''Get annual assessments'''
@@ -186,7 +192,7 @@ class KeepTrying(ClinicalQualityMeasure):
             bool: True if the patient has had a phone call this week, False otherwise.
         '''
         phone_calls: InterviewRecordSet = self._get_phone_calls_to_patient()
-        return bool(phone_calls.after(NOW.shift(weeks=-1)))
+        return bool(phone_calls.after(self._now.shift(weeks=-1)))
 
     def compute_results(self) -> ProtocolResult:
         '''Compute the results of the protocol for a patient.
@@ -197,12 +203,14 @@ class KeepTrying(ClinicalQualityMeasure):
         result = ProtocolResult()
         if self.in_denominator():
             if self.in_numerator():
+                next_monday_evening = self._now.shift(days=7 - self._now.weekday()).replace(hour=23)
+                result.next_review = next_monday_evening
                 result.status = STATUS_SATISFIED
-                result.add_narrative('Patient has been called this week. No action needed.')
+                result.add_narrative('Patient has been called this week. Try again next week.')
             else:
                 result.due_in = -1
                 result.status = STATUS_DUE
-                result.add_narrative('Patient needs to be called today.')
+                result.add_narrative('Patient needs to be called this week.')
         else:
             result.status = STATUS_NOT_APPLICABLE
             result.add_narrative('Patient does not need to be called.')
