@@ -19,8 +19,7 @@ from canvas_workflow_kit.protocol import (
 )
 from canvas_workflow_kit.value_set import ValueSet
 
-# Replace this with time zone of your clinic
-NOW = arrow.now(tz='America/Phoenix')
+DEFAULT_TIMEZONE = 'America/Phoenix'
 # Replace this with the ID of your Phone Call Disposition Questionnaire
 PHONE_CALL_DISPOSITION_QUESTIONNAIRE_ID = 'QUES_PHONE_01'
 
@@ -78,7 +77,7 @@ class AnnualAssessment(ValueSet):
 
 class NewMembers(ClinicalQualityMeasure):
     class Meta:
-        title = 'Engagement: Phase 1 - New Members'
+        title = 'Engagement For New Members'
         description = (
             'This protocol identifies patients to be called who have not had an annual assessment, '
             'have had fewer than 5 phone call attempts, '
@@ -86,14 +85,21 @@ class NewMembers(ClinicalQualityMeasure):
             'do not have a "non interested" status, '
             'and do not have a engagement/transition task.'
         )
-        version = '1.0.1'
+        version = '1.0.2'
         information = (
             'https://canvasmedical.com/gallery'  # Replace this with a link to your protocol
         )
-        identifiers = []
+        identifiers: List[str]
         types = ['DUO']
         compute_on_change_types = [CHANGE_TYPE.INTERVIEW, CHANGE_TYPE.APPOINTMENT, CHANGE_TYPE.TASK]
-        references = []
+        references: List[str]
+
+    def _get_timezone(self) -> str:
+        return self.settings.get('TIMEZONE') or DEFAULT_TIMEZONE
+
+    @property
+    def _now(self) -> arrow.Arrow:
+        return arrow.now(self._get_timezone())
 
     def _get_annual_assessments_between(
         self, start: arrow.Arrow, end: arrow.Arrow
@@ -197,7 +203,7 @@ class NewMembers(ClinicalQualityMeasure):
         '''
         phone_calls = self._get_phone_calls_to_patient()
         return (
-            not self._get_annual_assessments_between(arrow.get(NOW.year, 1, 1), NOW)
+            not self._get_annual_assessments_between(arrow.get(self._now.year, 1, 1), self._now)
             and len(phone_calls) < 5
             and not self._get_upcoming_appointments()
             and PhoneResponses.REACHED_NOT_INTERESTED not in self._get_phone_call_responses()
@@ -211,7 +217,7 @@ class NewMembers(ClinicalQualityMeasure):
             bool: True if the patient has had a phone call today, False otherwise.
         '''
         phone_calls = self._get_phone_calls_to_patient()
-        return bool(phone_calls.after(NOW.shift(days=-1)))
+        return bool(phone_calls.after(self._now.shift(days=-1)))
 
     def compute_results(self) -> ProtocolResult:
         '''
@@ -224,8 +230,9 @@ class NewMembers(ClinicalQualityMeasure):
 
         if self.in_denominator():
             if self.in_numerator():
+                result.next_review = self._now.shift(days=1).replace(hour=23)
                 result.status = STATUS_SATISFIED
-                result.add_narrative('Patient has been called today. No action needed.')
+                result.add_narrative('Patient has been called today. Try again tomorrow.')
             else:
                 result.due_in = -1
                 result.status = STATUS_DUE
