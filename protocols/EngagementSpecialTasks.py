@@ -28,6 +28,13 @@ class SpecialTasks(ClinicalQualityMeasure):
         compute_on_change_types = [CHANGE_TYPE.TASK]
         references: List[str] = []
 
+    def _get_timezone(self) -> str:
+        return self.settings.get('TIMEZONE') or DEFAULT_TIMEZONE
+
+    @property
+    def _now(self) -> arrow.Arrow:
+        return arrow.now(self._get_timezone())
+
     def _get_tasks_by_label(self, labels: List[str]) -> TaskRecordSet:
         '''
         Get all tasks with specified labels.
@@ -61,9 +68,10 @@ class SpecialTasks(ClinicalQualityMeasure):
         Returns:
             bool: True if there are patients with a special task in the future, False otherwise.
         '''
-        now = arrow.now(DEFAULT_TIMEZONE)
         engagement_transition_tasks = self._get_tasks_by_label(ENGAGEMENT_TRANSITION_TASK_LABELS)
-        return any(arrow.get(task['due']) > now for task in engagement_transition_tasks.records)
+        return any(
+            arrow.get(task['due']) > self._now for task in engagement_transition_tasks.records
+        )
 
     def compute_results(self) -> ProtocolResult:
         '''Computes the results of the special tasks protocol.
