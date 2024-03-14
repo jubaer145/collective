@@ -19,8 +19,8 @@ class Hysterectomy(ValueSet):
     SNOMEDCT = {'236886002'}
 
 class PostmenopausalHormoneTherapyInstruction(ValueSet):
-        VALUE_SET_NAME = 'Postmenopausal hormone replacement therapy'
-        SNOMEDCT = {'724158008'}
+    VALUE_SET_NAME = 'Postmenopausal hormone replacement therapy'
+    SNOMEDCT = {'724158008'}
     
     
     
