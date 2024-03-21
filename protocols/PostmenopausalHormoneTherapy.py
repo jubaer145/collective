@@ -10,22 +10,17 @@ from canvas_workflow_kit.recommendation import  InstructionRecommendation
 from canvas_workflow_kit.value_set import ValueSet
 
 
-class PostmenopuasalState(ValueSet):
-    VALUE_SET_NAME = 'Postmenopuasal state' 
-    SNOMEDCT = {'76498008'}
+class PostmenopausalState(ValueSet):
+    VALUE_SET_NAME = 'Postmenopuasal State' 
+    ICD10CM = {'N95.0', 'N95.1'}
     
 class Hysterectomy(ValueSet):
-    VALUE_SET_NAME = 'Hyesterrectory'
-    SNOMEDCT = {'236886002'}
+    VALUE_SET_NAME = 'Hysterectomy'
+    ICD10CM = {'Z90.710'}
 
 class PostmenopausalHormoneTherapyInstruction(ValueSet):
     VALUE_SET_NAME = 'Postmenopausal hormone replacement therapy'
-    SNOMEDCT = {'724158008'}
-    
-    
-    
-    
-
+    ICD10CM = {'Z79.890'}
 
 class HormoneTherapyProtocol(ClinicalQualityMeasure):
 
@@ -33,9 +28,9 @@ class HormoneTherapyProtocol(ClinicalQualityMeasure):
 
         title = 'Hormone Therapy Protocol'
 
-        description = 'Hormone Therapy in Postmenopausl Persons who had hysterectomy'
+        description = 'Hormone Therapy in Postmenopausal Persons who had hysterectomy'
 
-        version = '2022-11-01v1'
+        version = '2022-11-01v2'
 
         information = 'https://docs.canvasmedical.com'
 
@@ -44,7 +39,9 @@ class HormoneTherapyProtocol(ClinicalQualityMeasure):
         types = ['CQM']
 
         compute_on_change_types = [
-            CHANGE_TYPE.CONDITION
+            CHANGE_TYPE.CONDITION,
+            CHANGE_TYPE.PATIENT,
+            CHANGE_TYPE.INTERVIEW
         ]
 
         references = [
@@ -56,7 +53,7 @@ class HormoneTherapyProtocol(ClinicalQualityMeasure):
         """
         Patients in the postmenopausal state.
         """
-        return self.patient.interviews.find(PostmenopuasalState)
+        return self.patient.conditions.find(PostmenopausalState)
 
     def in_numerator(self):
         """
