@@ -11,7 +11,7 @@ from canvas_workflow_kit.value_set import ValueSet
 
 
 class PostmenopausalState(ValueSet):
-    VALUE_SET_NAME = 'Postmenopuasal State' 
+    VALUE_SET_NAME = 'Postmenopausal State' 
     ICD10CM = {'N95.0', 'N95.1'}
     
 class Hysterectomy(ValueSet):
